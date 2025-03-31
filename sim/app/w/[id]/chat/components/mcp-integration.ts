@@ -6,49 +6,18 @@
  */
 
 import { MCPServer } from '@/app/w/agents/stores/types'
-import { MCPTrace } from './types'
+import { MCPTrace, MCPIntegrationOptions, MCPResponse, GeminiRequestMessage, GeminiRequestConfig, GeminiResponse } from './types'
 import { v4 as uuidv4 } from 'uuid'
 
-export interface MCPIntegrationOptions {
-  server: MCPServer
-  systemPrompt?: string
-  model?: string
-}
-
-export interface MCPResponse {
-  traces: MCPTrace[]
-  response: string
-}
-
-interface GeminiRequestMessage {
-  role: string;
-  parts: {
-    text: string;
-  }[];
-}
-
-interface GeminiRequestConfig {
-  contents: GeminiRequestMessage[];
-  safetySettings?: any[];
-  generationConfig?: {
-    temperature?: number;
-    topP?: number;
-    topK?: number;
-    maxOutputTokens?: number;
-  };
-}
-
-interface GeminiResponse {
-  candidates: {
-    content: {
-      parts: {
-        text: string;
-      }[];
-    };
-    finishReason: string;
-    safetyRatings: any[];
-  }[];
-}
+// Access environment variables safely
+const getEnvVariable = (key: string): string | undefined => {
+  // For client-side, access from window.__ENV__ if available
+  if (typeof window !== 'undefined' && (window as any).__ENV__ && (window as any).__ENV__[key]) {
+    return (window as any).__ENV__[key];
+  }
+  // For server-side, access from process.env
+  return typeof process !== 'undefined' && process.env ? process.env[key] : undefined;
+};
 
 /**
  * Creates an MCP integration for communicating with an MCP server
@@ -78,7 +47,7 @@ export function createMCPIntegration(options: MCPIntegrationOptions) {
   const callGeminiAPI = async (userMessage: string, files: File[] = []): Promise<string> => {
     try {
       const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent';
-      const API_KEY = server.apiKey || process.env.GEMINI_API_KEY;
+      const API_KEY = server.apiKey || getEnvVariable('GEMINI_API_KEY');
       
       if (!API_KEY) {
         throw new Error('Gemini API key not found. Please set it in the MCP server configuration.');

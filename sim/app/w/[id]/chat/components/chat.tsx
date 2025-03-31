@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -15,7 +15,7 @@ import { FileUpload } from './file-upload'
 import { MCPTrace } from './types'
 import { createMCPIntegration } from './mcp-integration'
 
-export function Chat() {
+export function Chat(): React.ReactElement {
   const params = useParams()
   const workspaceId = params.id as string
   
@@ -52,7 +52,7 @@ export function Chat() {
       
       // Set up MCP integration if agent has an associated MCP server
       if (agent.mcpServer) {
-        const mcpServer = mcpServers.find(server => server.id === agent.config.mcpServerId)
+        const mcpServer = mcpServers.find((server: MCPServer) => server.id === agent.config.mcpServerId)
         if (mcpServer) {
           setMcpIntegration(createMCPIntegration({ 
             server: mcpServer,
@@ -73,7 +73,7 @@ export function Chat() {
   }, [messages])
   
   // Handle message send - simplified implementation
-  const handleSend = () => {
+  const handleSend = (): void => {
     console.log("Send button clicked", { message, isProcessing })
     
     // Don't do anything if already processing or no content
@@ -91,7 +91,7 @@ export function Chat() {
     console.log("Proceeding with send")
     
     // Create user message
-    const userMessage = {
+    const userMessage: ChatMessage = {
       id: uuidv4(),
       agentId: selectedAgent.id,
       role: 'user',
@@ -109,7 +109,7 @@ export function Chat() {
     
     // Simulate response (for debugging)
     setTimeout(() => {
-      const assistantMessage = {
+      const assistantMessage: ChatMessage = {
         id: uuidv4(),
         agentId: selectedAgent.id,
         role: 'assistant',
@@ -127,13 +127,13 @@ export function Chat() {
   }
   
   // Handle file upload
-  const handleFileUpload = (newFiles: File[]) => {
-    setFiles(prev => [...prev, ...newFiles])
+  const handleFileUpload = (newFiles: File[]): void => {
+    setFiles((prev: File[]) => [...prev, ...newFiles])
   }
   
   // Handle file removal
-  const handleRemoveFile = (fileName: string) => {
-    setFiles(files.filter(file => file.name !== fileName))
+  const handleRemoveFile = (fileName: string): void => {
+    setFiles(files.filter((file: File) => file.name !== fileName))
   }
   
   return (
@@ -180,7 +180,7 @@ export function Chat() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map(msg => (
+                  {messages.map((msg: ChatMessage) => (
                     <ChatMessageItem key={msg.id} message={msg} />
                   ))}
                   {isProcessing && (
@@ -195,12 +195,13 @@ export function Chat() {
             <div className="p-4 border-t bg-background">
               {files.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {files.map(file => (
+                  {files.map((file: File) => (
                     <div key={file.name} className="flex items-center bg-muted px-2 py-1 rounded-md text-xs">
                       <span className="mr-1 truncate max-w-[150px]">{file.name}</span>
                       <button 
                         onClick={() => handleRemoveFile(file.name)}
                         className="text-muted-foreground hover:text-destructive"
+                        type="button"
                       >
                         &times;
                       </button>
@@ -213,10 +214,10 @@ export function Chat() {
                 <div className="flex-1">
                   <Textarea
                     value={message}
-                    onChange={e => setMessage(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(e.target.value)}
                     placeholder="Type your message here..."
                     className="min-h-[80px]"
-                    onKeyDown={e => {
+                    onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
                         handleSend()
@@ -230,6 +231,7 @@ export function Chat() {
                     onClick={handleSend}
                     disabled={isProcessing || (!message.trim() && files.length === 0)}
                     className="px-6"
+                    type="button"
                   >
                     Send
                   </Button>
