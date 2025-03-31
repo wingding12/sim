@@ -157,16 +157,18 @@ export function Chat() {
             </div>
           )}
         </div>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="chat">Chat</TabsTrigger>
-            <TabsTrigger value="trace">Trace View</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="w-[400px]">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="trace">Trace View</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
       
       <div className="flex-1 overflow-hidden">
-        <TabsContent value="chat" className="h-full">
+        {activeTab === 'chat' ? (
           <div className="flex flex-col h-full">
             <ScrollArea className="flex-1 p-4" ref={chatContainerRef}>
               {messages.length === 0 ? (
@@ -232,11 +234,11 @@ export function Chat() {
               </div>
             </div>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="trace" className="h-full p-4">
-          <MCPTraceViewer traces={mcpTraces} />
-        </TabsContent>
+        ) : (
+          <div className="h-full p-4">
+            <MCPTraceViewer traces={mcpTraces} />
+          </div>
+        )}
       </div>
     </div>
   )
