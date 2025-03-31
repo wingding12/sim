@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -37,11 +37,16 @@ export function Chat() {
   const { agents, mcpServers } = useAgentStore()
   
   // Refs
-  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const chatContainerRef = useRef<HTMLDivElement | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null)
+  
+  // Debug
+  console.log("Chat component rendered", { messageCount: messages.length, isProcessing })
   
   // Select the first agent by default and setup MCP integration
   useEffect(() => {
-    if (agents.length > 0 && !selectedAgent) {
+    console.log("Agent useEffect", { agentsCount: agents?.length })
+    if (agents?.length > 0 && !selectedAgent) {
       const agent = agents[0]
       setSelectedAgent(agent)
       
@@ -52,7 +57,7 @@ export function Chat() {
           setMcpIntegration(createMCPIntegration({ 
             server: mcpServer,
             systemPrompt: agent.config.systemPrompt,
-            model: agent.config.model
+            model: agent.config.model || 'gemini-2.0-flash'
           }))
         }
       }
@@ -61,90 +66,78 @@ export function Chat() {
   
   // Scroll to bottom of chat when messages change
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    console.log("Scrolling to bottom", { messageCount: messages.length })
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
     }
   }, [messages])
   
-  // Handle message send
-  const handleSendMessage = async () => {
-    if (!message.trim() && files.length === 0) return
-    if (!selectedAgent) return
+  // Handle message send - simplified implementation
+  const handleSend = () => {
+    console.log("Send button clicked", { message, isProcessing })
+    
+    // Don't do anything if already processing or no content
+    if (isProcessing || (!message.trim() && files.length === 0)) {
+      console.log("Send blocked", { isProcessing, hasMessage: !!message.trim(), fileCount: files.length })
+      return
+    }
+    
+    // Prevent if no agent
+    if (!selectedAgent) {
+      console.log("No agent selected")
+      return
+    }
+    
+    console.log("Proceeding with send")
     
     // Create user message
-    const userMessageId = uuidv4()
-    const userMessage: ChatMessage = {
-      id: userMessageId,
+    const userMessage = {
+      id: uuidv4(),
       agentId: selectedAgent.id,
       role: 'user',
       content: message,
       timestamp: new Date().toISOString(),
     }
     
-    // Add message to chat
-    setMessages((prev: ChatMessage[]) => [...prev, userMessage])
+    // Update messages with user message
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
+    
+    // Clear input and set processing
     setMessage('')
     setIsProcessing(true)
     
-    try {
-      let response: string
-      let traces: MCPTrace[] = []
-      
-      // Use MCP integration if available
-      if (mcpIntegration) {
-        const result = await mcpIntegration.sendMessage(message, files)
-        response = result.response
-        traces = result.traces
-      } else {
-        // Fallback to simulated response
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        response = `This is a simulated response to your message: "${message}"${files.length > 0 ? ` and ${files.length} uploaded files` : ''}`
-        traces = [
-          { 
-            id: uuidv4(), 
-            tool: 'simulated_tool', 
-            status: 'completed', 
-            startTime: Date.now() - 1000, 
-            endTime: Date.now(),
-            result: 'Simulated result'
-          }
-        ]
-      }
-      
-      // Update MCP traces
-      setMcpTraces((prev: MCPTrace[]) => [...prev, ...traces])
-      
-      // Create assistant message
-      const assistantMessage: ChatMessage = {
+    // Simulate response (for debugging)
+    setTimeout(() => {
+      const assistantMessage = {
         id: uuidv4(),
         agentId: selectedAgent.id,
         role: 'assistant',
-        content: response,
+        content: `This is a simulated response to: "${userMessage.content}"`,
         timestamp: new Date().toISOString(),
       }
       
-      // Add assistant message
-      setMessages((prev: ChatMessage[]) => [...prev, assistantMessage])
+      // Update messages with assistant response
+      setMessages([...newMessages, assistantMessage])
       setIsProcessing(false)
       setFiles([])
-    } catch (error) {
-      console.error('Error processing message:', error)
-      setIsProcessing(false)
-    }
+      
+      console.log("Response added", { newCount: newMessages.length + 1 })
+    }, 1000)
   }
   
   // Handle file upload
   const handleFileUpload = (newFiles: File[]) => {
-    setFiles((prev: File[]) => [...prev, ...newFiles])
+    setFiles(prev => [...prev, ...newFiles])
   }
   
   // Handle file removal
   const handleRemoveFile = (fileName: string) => {
-    setFiles(files.filter((file: File) => file.name !== fileName))
+    setFiles(files.filter(file => file.name !== fileName))
   }
   
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ paddingBottom: '8rem', marginTop: '1rem' }}>
       <div className="flex items-center justify-between p-4 bg-background border-b">
         <div className="flex items-center space-x-4">
           <h1 className="text-xl font-bold">Agent Chat</h1>
@@ -167,10 +160,19 @@ export function Chat() {
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div 
+        className="flex-1 overflow-hidden" 
+        style={{ 
+          maxHeight: 'calc(100vh - 16rem)',
+          height: 'calc(100vh - 16rem)'
+        }}
+      >
         {activeTab === 'chat' ? (
           <div className="flex flex-col h-full">
-            <ScrollArea className="flex-1 p-4" ref={chatContainerRef}>
+            <div 
+              ref={scrollAreaRef} 
+              className="flex-1 p-4 overflow-y-auto"
+            >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
                   <p className="mb-2">No messages yet</p>
@@ -178,7 +180,7 @@ export function Chat() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map((msg) => (
+                  {messages.map(msg => (
                     <ChatMessageItem key={msg.id} message={msg} />
                   ))}
                   {isProcessing && (
@@ -188,12 +190,12 @@ export function Chat() {
                   )}
                 </div>
               )}
-            </ScrollArea>
+            </div>
             
             <div className="p-4 border-t bg-background">
               {files.length > 0 && (
                 <div className="mb-2 flex flex-wrap gap-2">
-                  {files.map((file) => (
+                  {files.map(file => (
                     <div key={file.name} className="flex items-center bg-muted px-2 py-1 rounded-md text-xs">
                       <span className="mr-1 truncate max-w-[150px]">{file.name}</span>
                       <button 
@@ -211,13 +213,13 @@ export function Chat() {
                 <div className="flex-1">
                   <Textarea
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={e => setMessage(e.target.value)}
                     placeholder="Type your message here..."
                     className="min-h-[80px]"
-                    onKeyDown={(e) => {
+                    onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
-                        handleSendMessage()
+                        handleSend()
                       }
                     }}
                   />
@@ -225,8 +227,9 @@ export function Chat() {
                 <div className="flex flex-col space-y-2">
                   <FileUpload onUpload={handleFileUpload} />
                   <Button 
-                    onClick={handleSendMessage} 
+                    onClick={handleSend}
                     disabled={isProcessing || (!message.trim() && files.length === 0)}
+                    className="px-6"
                   >
                     Send
                   </Button>
@@ -235,7 +238,7 @@ export function Chat() {
             </div>
           </div>
         ) : (
-          <div className="h-full p-4">
+          <div className="h-full p-4 overflow-y-auto">
             <MCPTraceViewer traces={mcpTraces} />
           </div>
         )}

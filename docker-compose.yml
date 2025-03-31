@@ -1,10 +1,12 @@
-version: '3.8'
+version: "3.8"
 
 services:
   simstudio:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
     ports:
       - "3000:3000"
     volumes:
@@ -12,22 +14,33 @@ services:
       - /app/node_modules
       - /app/.next
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/simstudio
+      - DATABASE_DIRECT_URL=postgresql://postgres:postgres@db:5432/simstudio
       - POSTGRES_URL=postgresql://postgres:postgres@db:5432/simstudio
       - BETTER_AUTH_URL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
-      - BETTER_AUTH_SECRET=your_auth_secret_here
-      - ENCRYPTION_KEY=your_encryption_key_here
-      - GOOGLE_CLIENT_ID=placeholder
-      - GOOGLE_CLIENT_SECRET=placeholder
-      - GITHUB_CLIENT_ID=placeholder
-      - GITHUB_CLIENT_SECRET=placeholder
-      - RESEND_API_KEY=placeholder
-      - WEBCONTAINER_CLIENT_ID=placeholder
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-your_auth_secret_here}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-your_encryption_key_here}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-placeholder}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-placeholder}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-placeholder}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-placeholder}
+      - RESEND_API_KEY=${RESEND_API_KEY:-placeholder}
+      - WEBCONTAINER_CLIENT_ID=${WEBCONTAINER_CLIENT_ID:-placeholder}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-secret}
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   db:
     image: postgres:16
@@ -46,5 +59,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
-  postgres_data: 
+  postgres_data:
+  redis_data:
