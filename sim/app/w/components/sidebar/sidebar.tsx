@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import clsx from 'clsx'
-import { Anvil, HelpCircle, Plus, ScrollText, Settings, Store, MessageSquare } from 'lucide-react'
+import { Anvil, HelpCircle, Plus, ScrollText, Settings, Store } from 'lucide-react'
 import { AgentIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -121,29 +121,6 @@ export function Sidebar() {
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">Marketplace</TooltipContent>
-        </Tooltip>
-
-        {/* Chatbot */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              asChild
-              className={clsx(
-                'flex !h-9 !w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8',
-                {
-                  'bg-accent': pathname === '/w/chatbot',
-                }
-              )}
-            >
-              <Link href="/w/chatbot">
-                <MessageSquare className="!h-5 !w-5" />
-                <span className="sr-only">Chat</span>
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">Chat</TooltipContent>
         </Tooltip>
 
         {/* Agents */}

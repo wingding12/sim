@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { Bell, ChevronDown, History, Loader2, Play, Rocket, Store, Trash2 } from 'lucide-react'
+import { Bell, ChevronDown, History, Loader2, Play, Rocket, Store, Trash2, MessageSquare } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,8 @@ const RUN_COUNT_OPTIONS = [1, 5, 10, 25, 50, 100]
  */
 export function ControlBar() {
   const router = useRouter()
+  const pathname = usePathname()
+  const workspaceId = pathname?.split('/')[2] // Extract ID from /w/[id]/* path
 
   // Store hooks
   const { notifications, getWorkflowNotifications, addNotification, showNotification } =
@@ -640,26 +643,62 @@ export function ControlBar() {
     </div>
   )
 
+  // Render navigation tabs
+  const renderNavTabs = () => {
+    if (!workspaceId) return null
+
+    const basePath = `/w/${workspaceId}`
+    const isWorkflowTab = pathname === basePath || pathname === `${basePath}/`
+    const isChatTab = pathname === `${basePath}/chat`
+
+    return (
+      <div className="flex items-center mr-4">
+        <Link href={basePath}>
+          <Button 
+            variant={isWorkflowTab ? "secondary" : "ghost"} 
+            size="sm"
+            className="mr-2"
+          >
+            Workflow
+          </Button>
+        </Link>
+        <Link href={`${basePath}/chat`}>
+          <Button 
+            variant={isChatTab ? "secondary" : "ghost"} 
+            size="sm"
+            className="flex items-center gap-1"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex h-16 w-full items-center justify-between bg-background px-6 border-b transition-all duration-300">
-      {/* Left Section - Workflow Info */}
-      {renderWorkflowName()}
-
-      {/* Middle Section - Reserved for future use */}
-      <div className="flex-1" />
-
-      {/* Right Section - Actions */}
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background px-4">
+      <div className="flex items-center">
+        {renderNavTabs()}
+        {renderWorkflowName()}
+      </div>
       <div className="flex items-center gap-2">
-        {renderDeleteButton()}
+        {renderRunButton()}
+        {isDeployed && renderPublishButton()}
+        {renderDeployButton()}
         {renderHistoryDropdown()}
         {renderNotificationsDropdown()}
-        {renderPublishButton()}
-        {renderDeployButton()}
-        {renderRunButton()}
-
-        {/* Add the marketplace modal */}
-        <MarketplaceModal open={isMarketplaceModalOpen} onOpenChange={setIsMarketplaceModalOpen} />
+        {renderDeleteButton()}
       </div>
-    </div>
+      {showRunProgress && (
+        <div className="absolute bottom-0 left-0 right-0">
+          <Progress value={(completedRuns / runCount) * 100} className="h-1 rounded-none" />
+        </div>
+      )}
+      <MarketplaceModal
+        open={isMarketplaceModalOpen}
+        onOpenChange={setIsMarketplaceModalOpen}
+      />
+    </header>
   )
 }
